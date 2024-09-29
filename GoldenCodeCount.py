@@ -1,6 +1,7 @@
 import pandas as pd
 import yfinance as yf
 import pytz
+import matplotlib.pyplot as plt
 
 # Function to calculate RSI
 def calculate_rsi(data, period=14):
@@ -105,3 +106,15 @@ signal_summary = aggregate_signals(signal_matrix)
 signal_summary.to_csv('NAS100_MAStoch_Aggregated_Counts.csv')
 
 print("Signal summary counts successfully exported to 'NAS100_MAStoch_Aggregated_Counts.csv'.")
+
+# Download NDQ data
+ndq_data = yf.download('NDQ', period='2y', interval='1h')
+
+# Plot NDQ Close Price
+plt.figure(figsize=(14, 7))
+plt.plot(ndq_data.index, ndq_data['Close'], label='NDQ Close Price', color='blue')
+plt.title('NDQ Close Price (Hourly)')
+plt.xlabel('Date')
+plt.ylabel('Price')
+plt.legend()
+plt.show()
