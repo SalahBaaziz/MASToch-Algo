@@ -146,7 +146,9 @@ combined_df.reset_index(inplace=True)
 # Rename columns for clarity
 combined_df.rename(columns={'index': 'Date_Time', 'Close_NASDAQ': 'NASDAQ_Price'}, inplace=True)
 
-# Export the combined DataFrame to a CSV file
-combined_df.to_csv('NASDAQ_Signals_Test.csv', index=False)
+filename = 'NASDAQ_Signals_Test.csv'
 
-print("Combined signal summary with NASDAQ prices successfully exported to 'NASDAQ_Combined_Signals_Prices40.csv'.")
+# Export the combined DataFrame to a CSV file
+combined_df.to_csv(filename, index=False)
+
+print(f"Combined signal summary with NASDAQ prices successfully exported to {filename}.")
