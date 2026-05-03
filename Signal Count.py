@@ -1,17 +1,16 @@
 import pandas as pd
 import yfinance as yf
-
+import pytz
+import matplotlib.pyplot as plt
 
 # Function to calculate RSI
 def calculate_rsi(data, period=14):
     delta = data['Close'].diff(1)
     gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
-
     rs = gain / loss
     rsi = 100 - (100 / (1 + rs))
     return rsi
-
 
 # Function to calculate buy/sell signals
 def get_signals(data, fast_ma, slow_ma):
@@ -39,7 +38,6 @@ def get_signals(data, fast_ma, slow_ma):
 
     return signals
 
-
 # Function to create the signal matrix for multiple tickers
 def create_signal_matrix(tickers, fast_ma, slow_ma):
     signal_matrix = pd.DataFrame()
@@ -57,31 +55,30 @@ def create_signal_matrix(tickers, fast_ma, slow_ma):
 
     return signal_matrix
 
-
 # Function to align dates and handle missing data
 def align_dates(signal_matrix):
     # Fill any missing data (NaN) with '0' (no signal)
     signal_matrix = signal_matrix.fillna('0')
     return signal_matrix
 
-
-# Function to aggregate signals for each day
+# Function to aggregate counts of signals for each day
 def aggregate_signals(signal_matrix):
+
     signal_summary = pd.DataFrame(index=signal_matrix.index)
-    signal_summary['B'] = ''
-    signal_summary['S'] = ''
+    signal_summary['Buy_Count'] = (signal_matrix == 'B').sum(axis=1)
+    signal_summary['Sell_Count'] = (signal_matrix == 'S').sum(axis=1)
 
-    for date in signal_matrix.index:
-        # Get the tickers for Buy (B) signals
-        buy_tickers = signal_matrix.loc[date][signal_matrix.loc[date] == 'B'].index.tolist()
-        sell_tickers = signal_matrix.loc[date][signal_matrix.loc[date] == 'S'].index.tolist()
 
-        # Join tickers with commas
-        signal_summary.at[date, 'B'] = ','.join(buy_tickers)
-        signal_summary.at[date, 'S'] = ','.join(sell_tickers)
+
+
+    # Convert index to London time if it's timezone-naive
+    london_tz = pytz.timezone('Europe/London')
+    if signal_summary.index.tz is None:  # Check if index is timezone-naive
+        signal_summary.index = signal_summary.index.tz_localize('UTC').tz_convert(london_tz)
+    else:
+        signal_summary.index = signal_summary.index.tz_convert(london_tz)
 
     return signal_summary
-
 
 # List of NASDAQ 100 companies
 tickers = [
@@ -102,10 +99,22 @@ signal_matrix = create_signal_matrix(tickers, fast_ma, slow_ma)
 # Align dates and handle missing data
 signal_matrix = align_dates(signal_matrix)
 
-# Aggregate signals for each day
+# Aggregate counts of signals for each day
 signal_summary = aggregate_signals(signal_matrix)
 
 # Export the signal summary to a single CSV file
-signal_summary.to_csv('NAS100_MAStoch_Aggregated.csv')
+signal_summary.to_csv('NAS100_MAStoch_Aggregated_Counts.csv')
 
-print("Signal summary successfully exported to 'NAS100_MAStoch_Aggregated.csv'.")
+print("Signal summary counts successfully exported to 'NAS100_MAStoch_Aggregated_Counts.csv'.")
+
+# Download NDQ data
+ndq_data = yf.download('NDQ', period='2y', interval='1h')
+
+# Plot NDQ Close Price
+plt.figure(figsize=(14, 7))
+plt.plot(ndq_data.index, ndq_data['Close'], label='NDQ Close Price', color='blue')
+plt.title('NDQ Close Price (Hourly)')
+plt.xlabel('Date')
+plt.ylabel('Price')
+plt.legend()
+plt.show()

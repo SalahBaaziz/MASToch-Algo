@@ -1,6 +1,7 @@
 import pandas as pd
 import yfinance as yf
 import pytz
+import matplotlib.pyplot as plt
 
 # Function to calculate RSI
 def calculate_rsi(data, period=14):
@@ -76,11 +77,9 @@ def aggregate_signals(signal_matrix):
     return signal_summary
 
 # Function to generate long/short positions based on the net signals
-def generate_positions(signal_summary,sell_threshold, buy_threshold):
+def generate_positions(signal_summary, sell_threshold, buy_threshold):
     signal_summary['B_S'] = signal_summary['Buy_Count'] - signal_summary['Sell_Count']
     signal_summary['Position'] = "No Signal"  # Default position is no signal
-
-
 
     # Create variables to track the current position (long or short)
     long_position_active = False
@@ -90,13 +89,13 @@ def generate_positions(signal_summary,sell_threshold, buy_threshold):
     for i in range(len(signal_summary)):
         b_s_value = signal_summary.iloc[i]['B_S']
 
-        # Check if we have a long signal (B_S <= -20) and no active long position
+        # Check if we have a long signal and no active long position
         if b_s_value <= sell_threshold and not long_position_active:
             signal_summary.iloc[i, signal_summary.columns.get_loc('Position')] = "Short"
             long_position_active = True
             short_position_active = False  # Reset short position
 
-        # Check if we have a short signal (B_S >= 20) and no active short position
+        # Check if we have a short signal and no active short position
         elif b_s_value >= buy_threshold and not short_position_active:
             signal_summary.iloc[i, signal_summary.columns.get_loc('Position')] = "Long"
             short_position_active = True
@@ -109,15 +108,31 @@ def get_nasdaq_prices():
     nasdaq_data = yf.download("^NDX", period="730d", interval="1h")
     return nasdaq_data[['Close']]
 
+# Function to plot NASDAQ prices with buy/sell signals
+def plot_nasdaq_with_signals(nasdaq_prices, signal_summary):
+    plt.figure(figsize=(14, 8))
+    plt.plot(nasdaq_prices.index, nasdaq_prices['Close'], label='NASDAQ Price', color='blue')
+
+    # Plot Buy signals
+    buy_signals = signal_summary[signal_summary['Position'] == "Long"]
+    plt.scatter(buy_signals.index, nasdaq_prices.loc[buy_signals.index]['Close'], marker='^', color='green', label='Buy Signal', alpha=1)
+
+    # Plot Sell signals
+    sell_signals = signal_summary[signal_summary['Position'] == "Short"]
+    plt.scatter(sell_signals.index, nasdaq_prices.loc[sell_signals.index]['Close'], marker='v', color='red', label='Sell Signal', alpha=1)
+
+    plt.title('NASDAQ Price with Buy/Sell Signals')
+    plt.xlabel('Date')
+    plt.ylabel('Price')
+    plt.legend()
+    plt.grid()
+    plt.show()
+
 # List of NASDAQ 100 companies (reduced for demonstration)
 tickers = [
     "AAPL", "MSFT", "AMZN", "GOOGL", "GOOG", "NVDA", "TSLA", "META", "AVGO", "ADBE", "PEP", "COST", "CSCO", "AMD",
     "NFLX", "INTC", "TMUS", "HON", "TXN", "QCOM", "AMGN", "INTU", "AMAT", "SBUX", "BKNG", "PYPL", "ADP", "GILD", "MU",
-    "MDLZ", "ISRG", "LRCX", "SNPS", "REGN", "FISV", "MRVL", "ASML", "ORLY", "ATVI", "KLAC", "ADI", "MCHP", "PANW",
-    "CDNS", "MAR", "FTNT", "AEP", "CRWD", "DXCM", "VRTX", "XEL", "MNST", "EA", "WDAY", "PDD", "BIDU", "ILMN", "LULU",
-    "IDXX", "ABNB", "NXPI", "PCAR", "KDP", "EXC", "PAYX", "EBAY", "ODFL", "CSGP", "TEAM", "AZN", "VRSK", "ENPH",
-    "SGEN", "CHTR", "CPRT", "FAST", "MRNA", "SWKS", "CTAS", "VRSN", "MELI", "SPLK", "BIIB", "MRNA", "OKTA", "ZM",
-    "ALGN", "MTCH", "DDOG", "NTES", "ANSS", "CDW", "DXCM", "ZS", "SE", "LCID", "PDD", "JD", "LPLA", "BMRN"
+    "MDLZ", "ISRG", "LRCX", "SNPS", "REGN", "FISV", "MRVL", "ASML", "ORLY", "ATVI", "KLAC", "ADI", "MCHP", "PANW"
 ]
 
 # Create the signal matrix for all tickers
@@ -132,7 +147,9 @@ signal_matrix = align_dates(signal_matrix)
 signal_summary = aggregate_signals(signal_matrix)
 
 # Generate long/short positions based on B-S
-signal_summary_with_positions = generate_positions(signal_summary,sell_threshold=int(input("Enter Sell Threshold: ")),buy_threshold=int(input("Enter Buy Threshold: ")))
+sell_threshold = int(input("Enter Sell Threshold: "))
+buy_threshold = int(input("Enter Buy Threshold: "))
+signal_summary_with_positions = generate_positions(signal_summary, sell_threshold, buy_threshold)
 
 # Get NASDAQ hourly prices
 nasdaq_prices = get_nasdaq_prices()
@@ -140,15 +157,5 @@ nasdaq_prices = get_nasdaq_prices()
 # Combine NASDAQ prices with signal summary
 combined_df = signal_summary_with_positions.join(nasdaq_prices, how='outer', rsuffix='_NASDAQ')
 
-# Reset the index to make the time/date a column
-combined_df.reset_index(inplace=True)
-
-# Rename columns for clarity
-combined_df.rename(columns={'index': 'Date_Time', 'Close_NASDAQ': 'NASDAQ_Price'}, inplace=True)
-
-filename = f'NASDAQ_Signals_Test.csv'
-
-# Export the combined DataFrame to a CSV file
-combined_df.to_csv(filename, index=False)
-
-print(f"Combined signal summary with NASDAQ prices successfully exported to {filename}.")
+# Plot NASDAQ prices with buy/sell signals
+plot_nasdaq_with_signals(nasdaq_prices, signal_summary_with_positions)

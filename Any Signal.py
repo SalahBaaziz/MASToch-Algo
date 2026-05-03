@@ -3,6 +3,8 @@ import yfinance as yf
 import pytz
 
 # Function to calculate RSI
+
+ticker = input("Choose your ticker: ")
 def calculate_rsi(data, period=14):
     delta = data['Close'].diff(1)
     gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
@@ -106,18 +108,12 @@ def generate_positions(signal_summary,sell_threshold, buy_threshold):
 
 # Function to get NASDAQ hourly prices
 def get_nasdaq_prices():
-    nasdaq_data = yf.download("^NDX", period="730d", interval="1h")
+    nasdaq_data = yf.download(ticker, period="730d", interval="1h")
     return nasdaq_data[['Close']]
 
 # List of NASDAQ 100 companies (reduced for demonstration)
 tickers = [
-    "AAPL", "MSFT", "AMZN", "GOOGL", "GOOG", "NVDA", "TSLA", "META", "AVGO", "ADBE", "PEP", "COST", "CSCO", "AMD",
-    "NFLX", "INTC", "TMUS", "HON", "TXN", "QCOM", "AMGN", "INTU", "AMAT", "SBUX", "BKNG", "PYPL", "ADP", "GILD", "MU",
-    "MDLZ", "ISRG", "LRCX", "SNPS", "REGN", "FISV", "MRVL", "ASML", "ORLY", "ATVI", "KLAC", "ADI", "MCHP", "PANW",
-    "CDNS", "MAR", "FTNT", "AEP", "CRWD", "DXCM", "VRTX", "XEL", "MNST", "EA", "WDAY", "PDD", "BIDU", "ILMN", "LULU",
-    "IDXX", "ABNB", "NXPI", "PCAR", "KDP", "EXC", "PAYX", "EBAY", "ODFL", "CSGP", "TEAM", "AZN", "VRSK", "ENPH",
-    "SGEN", "CHTR", "CPRT", "FAST", "MRNA", "SWKS", "CTAS", "VRSN", "MELI", "SPLK", "BIIB", "MRNA", "OKTA", "ZM",
-    "ALGN", "MTCH", "DDOG", "NTES", "ANSS", "CDW", "DXCM", "ZS", "SE", "LCID", "PDD", "JD", "LPLA", "BMRN"
+    ticker
 ]
 
 # Create the signal matrix for all tickers
